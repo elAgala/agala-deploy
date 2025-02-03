@@ -4,7 +4,6 @@ when:
       - master
 
 steps:
-
   - name: "Build & push image"
     image: woodpeckerci/plugin-docker-buildx
     settings:
