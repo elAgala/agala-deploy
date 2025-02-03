@@ -1,0 +1,21 @@
+when:
+  - event: push
+    branch:
+      - master
+
+steps:
+  - name: "Build & push image"
+    image: woodpeckerci/plugin-docker-buildx
+    settings:
+      # Replace with your GitHub username/org and repository name
+      repo: ghcr.io/elagala/agala-deploy
+      # Use GitHub Container Registry
+      registry: ghcr.io
+      dockerfile: Dockerfile
+      # Auto tag with branch name, git tags, and commit SHA
+      auto_tag: true
+      # GitHub Personal Access Token (PAT) with package write permissions
+      username:
+        from_secret: github_username
+      password:
+        from_secret: github_pat
