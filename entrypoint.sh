@@ -15,4 +15,7 @@ exec ansible-playbook "$ANSIBLE_PLAYBOOK" \
   --diff \
   -e "app_version=${APP_VERSION}" \
   -e "ansible_ssh_private_key_file=~/.ssh/id_ed25519" \
-  -e "ansible_host_key_checking=false"
+  -e "ansible_host_key_checking=false" \
+  -e "registry_username=${REGISTRY_USERNAME}" \
+  -e "registry_password=${REGISTRY_PASSWORD}" \
+  -e "registry_url=${REGISTRY_URL}"
