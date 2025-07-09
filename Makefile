@@ -1,6 +1,6 @@
 DOCKER_REGISTRY = ghcr.io
 DOCKER_REPO = elagala/agala-deploy
-DOCKER_TAG = latest
+DOCKER_TAG = v1.0.1
 DOCKER_IMAGE = $(DOCKER_REGISTRY)/$(DOCKER_REPO):$(DOCKER_TAG)
 
 build:
