@@ -14,7 +14,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o entrypoint .
 FROM alpine:3.19
 
 # Install dependencies
-RUN apk add --no-cache python3 py3-pip openssh-client jq curl tar && \
+RUN apk add --no-cache python3 py3-pip openssh-client jq curl tar git && \
   pip3 install ansible --break-system-packages
 
 # Install 1Password CLI
@@ -23,7 +23,7 @@ RUN echo https://downloads.1password.com/linux/alpinelinux/stable/ >> /etc/apk/r
   apk update && apk add 1password-cli
 
 # Install ansible community.docker collection
-RUN ansible-galaxy collection install community.docker:4.6.1
+RUN ansible-galaxy collection install community.docker:4.6.1 onepassword.connect
 
 # Copy the Go binary from builder
 COPY --from=builder /build/entrypoint /entrypoint

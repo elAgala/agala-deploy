@@ -41,7 +41,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "GH_USER must be set\n")
 		os.Exit(1)
 	}
-	
+
 	ghToken := os.Getenv("GH_TOKEN")
 	if ghToken == "" {
 		fmt.Fprintf(os.Stderr, "GH_TOKEN must be set\n")
@@ -87,12 +87,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Build paths for playbook and inventory
-	playbookPath := filepath.Join(repoPath, ansiblePlaybook)
+	// Playbook comes from mounted volume (project repo), inventory from Git repo
 	inventoryPath := filepath.Join(repoPath, ansibleInventory)
 
 	args := []string{
-		"ansible-playbook", playbookPath,
+		"ansible-playbook", ansiblePlaybook,
 		"--inventory", inventoryPath,
 	}
 
@@ -107,9 +106,9 @@ func main() {
 
 	// Registry variables - if any are present, all 3 must be present
 	registryUsername := os.Getenv("REGISTRY_USERNAME")
-	registryPassword := os.Getenv("REGISTRY_PASSWORD") 
+	registryPassword := os.Getenv("REGISTRY_PASSWORD")
 	registryURL := os.Getenv("REGISTRY_URL")
-	
+
 	if registryUsername != "" || registryPassword != "" || registryURL != "" {
 		if registryUsername == "" || registryPassword == "" || registryURL == "" {
 			fmt.Fprintf(os.Stderr, "If any registry variable is set, all 3 must be set: REGISTRY_USERNAME, REGISTRY_PASSWORD, REGISTRY_URL\n")
@@ -120,31 +119,8 @@ func main() {
 		args = append(args, "-e", fmt.Sprintf("registry_url=%s", registryURL))
 	}
 
-	// Process VAR_ prefixed environment variables
-	for _, env := range os.Environ() {
-		if strings.HasPrefix(env, "VAR_") {
-			parts := strings.SplitN(env, "=", 2)
-			if len(parts) != 2 {
-				continue
-			}
-
-			varName := strings.ToLower(strings.TrimPrefix(parts[0], "VAR_"))
-
-			cmd := exec.Command("op", "read", "op://"+parts[1])
-			output, err := cmd.Output()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to fetch %s from 1Password: %v\n", parts[0], err)
-				os.Exit(1)
-			}
-
-			value := strings.TrimSpace(string(output))
-			args = append(args, "-e", fmt.Sprintf("%s=%s", varName, value))
-		}
-	}
-
-	if err := syscall.Exec("ansible-playbook", args, os.Environ()); err != nil {
+	if err := syscall.Exec("/usr/bin/ansible-playbook", args, os.Environ()); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to execute ansible-playbook: %v\n", err)
 		os.Exit(1)
 	}
 }
-

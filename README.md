@@ -16,7 +16,7 @@ Containerized Ansible deployment tool with 1Password integration and Git-based i
     OP_CONNECT_TOKEN:
       from_secret: op_connect_token
     
-    # GitHub credentials for private ansible repo
+    # GitHub credentials for private inventory repo
     GH_USER:
       from_secret: github_username
     GH_TOKEN:
@@ -24,9 +24,9 @@ Containerized Ansible deployment tool with 1Password integration and Git-based i
     
     # Ansible configuration
     ANSIBLE_REPO: https://github.com/elAgala/agala-ansible.git
-    ANSIBLE_PLAYBOOK: site.yml
-    ANSIBLE_INVENTORY: inventories/production.yml
-    ANSIBLE_LIMIT: web
+    ANSIBLE_PLAYBOOK: .ansible/development.yml        # from project repo
+    ANSIBLE_INVENTORY: inventories/sisvoto.yml         # from Git repo
+    ANSIBLE_LIMIT: dev
     
     # SSH key from 1Password
     OP_ANSIBLE_PRIVATE_KEY_ROUTE:
@@ -40,24 +40,21 @@ Containerized Ansible deployment tool with 1Password integration and Git-based i
       from_secret: github_token
     
     # App deployment
-    APP_VERSION: ${DRONE_COMMIT_SHA}
-    
-    # Dynamic secrets from 1Password (optional)
-    VAR_DATABASE_PASSWORD: MyVault/Database/prod_password
-    VAR_API_KEY: MyVault/API/production_key
+    APP_VERSION: ${CI_COMMIT_SHA}
 ```
 
 ### Docker Run
 
 ```bash
 docker run --rm \
+  -v ./:/app/deploy \
   -e OP_CONNECT_HOST="https://your-connect-server" \
   -e OP_CONNECT_TOKEN="your-connect-token" \
   -e GH_USER="elAgala" \
   -e GH_TOKEN="ghp_xxxxxxxxxxxx" \
   -e ANSIBLE_REPO="https://github.com/elAgala/agala-ansible.git" \
-  -e ANSIBLE_PLAYBOOK="site.yml" \
-  -e ANSIBLE_INVENTORY="inventories/production.yml" \
+  -e ANSIBLE_PLAYBOOK="/app/deploy/.ansible/development.yml" \
+  -e ANSIBLE_INVENTORY="inventories/sisvoto.yml" \
   -e OP_ANSIBLE_PRIVATE_KEY_ROUTE="MyVault/SSH/deploy_key" \
   -e APP_VERSION="v1.2.3" \
   ghcr.io/elagala/agala-deploy:v1.0.3
@@ -68,34 +65,49 @@ docker run --rm \
 ### Required
 - `OP_CONNECT_HOST` - 1Password Connect server URL
 - `OP_CONNECT_TOKEN` - 1Password Connect token
-- `GH_USER` - GitHub username
+- `GH_USER` - GitHub username for inventory repo access
 - `GH_TOKEN` - GitHub personal access token
-- `ANSIBLE_PLAYBOOK` - Playbook filename (e.g., `site.yml`)
-- `ANSIBLE_INVENTORY` - Inventory path (e.g., `inventories/production.yml`)
+- `ANSIBLE_PLAYBOOK` - Path to playbook file from project repo (e.g., `.ansible/development.yml`)
+- `ANSIBLE_INVENTORY` - Inventory path from Git repo (e.g., `inventories/sisvoto.yml`)
 - `OP_ANSIBLE_PRIVATE_KEY_ROUTE` - 1Password reference to SSH private key
 
 ### Optional
-- `ANSIBLE_REPO` - Git repository URL (defaults to `https://github.com/elAgala/agala-ansible.git`)
-- `ANSIBLE_LIMIT` - Ansible limit parameter
+- `ANSIBLE_REPO` - Inventory Git repository URL (defaults to `https://github.com/elAgala/agala-ansible.git`)
+- `ANSIBLE_LIMIT` - Ansible limit parameter for targeting specific hosts
 - `APP_VERSION` - Application version to deploy
 - `REGISTRY_URL`, `REGISTRY_USERNAME`, `REGISTRY_PASSWORD` - Container registry credentials (all 3 required if any is set)
-- `VAR_*` - Dynamic variables fetched from 1Password (e.g., `VAR_API_KEY=MyVault/API/key` becomes `-e api_key=<value>`)
 
 ## How it Works
 
-1. Clones your private Ansible repository using GitHub credentials
+1. Clones your private Ansible inventory repository using GitHub credentials
 2. Fetches SSH private key from 1Password
-3. Processes any `VAR_*` environment variables by fetching values from 1Password
-4. Executes `ansible-playbook` with the specified inventory and playbook from your Git repo
+3. Executes `ansible-playbook` with:
+   - **Playbook**: From your project repository (mounted volume)
+   - **Inventory**: From the cloned Git repository
 
 ## Repository Structure
 
-Your Ansible repository should contain:
+**Your project repository** (mounted as volume):
+```
+├── .env                        # Application environment
+├── .ansible/
+│   └── development.yml         # Deployment playbook
+└── src/
+    └── ...                     # Application code
+```
+
+**Your inventory repository** (cloned from Git):
 ```
 ├── inventories/
-│   ├── production.yml
-│   └── development.yml
-├── site.yml
-├── roles/
-└── ...
+│   ├── production.yml          # Production servers
+│   ├── sisvoto.yml            # Development servers
+│   └── staging.yml            # Staging servers
+└── group_vars/
+    └── ...                    # Group variables
 ```
+
+This approach provides:
+- **Clean separation**: Playbooks with your code, inventories managed separately
+- **Version control**: Track inventory changes in Git
+- **Security**: Secrets managed through 1Password integration in your playbooks
+- **Flexibility**: Different inventories for different environments
