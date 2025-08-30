@@ -103,6 +103,8 @@ func main() {
 	args = append(args, "-e", fmt.Sprintf("app_version=%s", os.Getenv("APP_VERSION")))
 	args = append(args, "-e", fmt.Sprintf("ansible_ssh_private_key_file=%s", privateKeyPath))
 	args = append(args, "-e", "ansible_host_key_checking=false")
+	args = append(args, "-e", fmt.Sprintf("op_connect_host=%s", os.Getenv("OP_CONNECT_HOST")))
+	args = append(args, "-e", fmt.Sprintf("op_connect_token=%s", os.Getenv("OP_CONNECT_TOKEN")))
 
 	// Registry variables - if any are present, all 3 must be present
 	registryUsername := os.Getenv("REGISTRY_USERNAME")
