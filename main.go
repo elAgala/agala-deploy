@@ -10,28 +10,31 @@ import (
 )
 
 func main() {
-	// Check for required 1Password Connect authentication
-	if os.Getenv("OP_CONNECT_HOST") == "" {
-		fmt.Fprintf(os.Stderr, "OP_CONNECT_HOST must be set\n")
+	// SOPS_AGE_KEY passes through to Ansible via inherited env
+	if os.Getenv("SOPS_AGE_KEY") == "" {
+		fmt.Fprintf(os.Stderr, "SOPS_AGE_KEY must be set\n")
 		os.Exit(1)
 	}
-	if os.Getenv("OP_CONNECT_TOKEN") == "" {
-		fmt.Fprintf(os.Stderr, "OP_CONNECT_TOKEN must be set\n")
+
+	sshKey := os.Getenv("SSH_DEPLOY_KEY")
+	if sshKey == "" {
+		fmt.Fprintf(os.Stderr, "SSH_DEPLOY_KEY must be set\n")
 		os.Exit(1)
 	}
 
 	home := os.Getenv("HOME")
 
-	// Create directories
-	if err := os.MkdirAll(filepath.Join(home, ".ssh"), 0755); err != nil {
+	// Create .ssh directory
+	sshDir := filepath.Join(home, ".ssh")
+	if err := os.MkdirAll(sshDir, 0700); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to create .ssh directory: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Get required environment variables
-	privateKeyRoute := os.Getenv("OP_ANSIBLE_PRIVATE_KEY_ROUTE")
-	if privateKeyRoute == "" {
-		fmt.Fprintf(os.Stderr, "OP_ANSIBLE_PRIVATE_KEY_ROUTE must be set\n")
+	// Write SSH deploy key from env var
+	privateKeyPath := filepath.Join(sshDir, "id_ed25519")
+	if err := os.WriteFile(privateKeyPath, []byte(sshKey+"\n"), 0600); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to write SSH key: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -78,15 +81,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Fetch SSH private key from 1Password
-	privateKeyPath := filepath.Join(home, ".ssh", "id_ed25519")
-	cmd = exec.Command("op", "read", "-o", privateKeyPath, "op://"+privateKeyRoute+"?ssh-format=openssh")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		os.Exit(1)
-	}
-
 	// Playbook comes from mounted volume (project repo), inventory from Git repo
 	inventoryPath := filepath.Join(repoPath, ansibleInventory)
 
@@ -103,8 +97,6 @@ func main() {
 	args = append(args, "-e", fmt.Sprintf("app_version=%s", os.Getenv("APP_VERSION")))
 	args = append(args, "-e", fmt.Sprintf("ansible_ssh_private_key_file=%s", privateKeyPath))
 	args = append(args, "-e", "ansible_host_key_checking=false")
-	args = append(args, "-e", fmt.Sprintf("op_connect_host=%s", os.Getenv("OP_CONNECT_HOST")))
-	args = append(args, "-e", fmt.Sprintf("op_connect_token=%s", os.Getenv("OP_CONNECT_TOKEN")))
 
 	// Registry variables - if any are present, all 3 must be present
 	registryUsername := os.Getenv("REGISTRY_USERNAME")

@@ -17,13 +17,21 @@ FROM alpine:3.19
 RUN apk add --no-cache python3 py3-pip openssh-client jq curl tar git && \
   pip3 install ansible --break-system-packages
 
-# Install 1Password CLI
-RUN echo https://downloads.1password.com/linux/alpinelinux/stable/ >> /etc/apk/repositories && \
-  wget https://downloads.1password.com/linux/keys/alpinelinux/support@1password.com-61ddfc31.rsa.pub -P /etc/apk/keys && \
-  apk update && apk add 1password-cli
+# Install sops
+RUN curl -fsSL -o /usr/local/bin/sops \
+  https://github.com/getsops/sops/releases/download/v3.9.4/sops-v3.9.4.linux.amd64 && \
+  chmod +x /usr/local/bin/sops
 
-# Install ansible community.docker collection
-RUN ansible-galaxy collection install community.docker:4.6.1 onepassword.connect
+# Install age
+RUN curl -fsSL -o /tmp/age.tar.gz \
+  https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-amd64.tar.gz && \
+  tar -xzf /tmp/age.tar.gz -C /tmp && \
+  mv /tmp/age/age /usr/local/bin/age && \
+  mv /tmp/age/age-keygen /usr/local/bin/age-keygen && \
+  rm -rf /tmp/age /tmp/age.tar.gz
+
+# Install ansible collections
+RUN ansible-galaxy collection install community.docker:4.6.1 community.sops
 
 # Copy the Go binary from builder
 COPY --from=builder /build/entrypoint /entrypoint

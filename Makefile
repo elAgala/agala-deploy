@@ -1,6 +1,6 @@
 DOCKER_REGISTRY = ghcr.io
 DOCKER_REPO = elagala/agala-deploy
-DOCKER_TAG = v2.0.0
+DOCKER_TAG = v3.0.0
 DOCKER_IMAGE = $(DOCKER_REGISTRY)/$(DOCKER_REPO):$(DOCKER_TAG)
 
 build:
@@ -9,13 +9,11 @@ build:
 
 run-local:
 	@echo "Building Docker image: $(DOCKER_IMAGE)"
-	docker build -t ansible-1password:local .
-	op inject --in-file .env --out-file .env.resolved -f && \
+	docker build -t agala-deploy:local .
 	docker run --rm -it \
-		--env-file .env.resolved \
+		--env-file .env \
 		-v ./deploy:/app/deploy \
-		ansible-1password:local && \
-	rm .env.resolved
+		agala-deploy:local
 
 push:
 	@echo "Pushing Docker image: $(DOCKER_IMAGE)"
@@ -24,11 +22,11 @@ push:
 build-and-push: build push
 
 test-vars:
-	@echo "Testing variable parsing with .env.test"
-	docker build -t ansible-1password:local .
+	@echo "Testing variable parsing with .env"
+	docker build -t agala-deploy:local .
 	docker run --rm \
 		--env-file .env \
-		ansible-1password:local
+		agala-deploy:local
 
 clean:
 	@echo "Removing local Docker image: $(DOCKER_IMAGE)"
