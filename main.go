@@ -81,7 +81,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Playbook comes from mounted volume (project repo), inventory from Git repo
+	// Both playbook and inventory resolve relative to cloned ansible repo
+	if !filepath.IsAbs(ansiblePlaybook) {
+		ansiblePlaybook = filepath.Join(repoPath, ansiblePlaybook)
+	}
 	inventoryPath := filepath.Join(repoPath, ansibleInventory)
 
 	args := []string{
