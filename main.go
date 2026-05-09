@@ -116,7 +116,8 @@ func main() {
 		args = append(args, "-e", fmt.Sprintf("registry_url=%s", registryURL))
 	}
 
-	if err := syscall.Exec("/usr/bin/ansible-playbook", args, os.Environ()); err != nil {
+	env := append(os.Environ(), fmt.Sprintf("ANSIBLE_CONFIG=%s", filepath.Join(repoPath, "ansible.cfg")))
+	if err := syscall.Exec("/usr/bin/ansible-playbook", args, env); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to execute ansible-playbook: %v\n", err)
 		os.Exit(1)
 	}
